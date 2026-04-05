@@ -1,8 +1,5 @@
 const crypto = require("crypto");
-const sqlite3 = require("better-sqlite3");
-const path = require("path");
-const fs = require("fs");
-const os = require("os");
+const initSqlJs = require("sql.js");
 
 function generateKeypair() {
   const { publicKey, privateKey } = crypto.generateKeyPairSync("x25519");
@@ -28,114 +25,112 @@ async function registerDevice(publicKey) {
   return await res.json();
 }
 
-function buildDb(tunnels) {
-  const tmpFile = path.join(os.tmpdir(), `wg-${Date.now()}.sqlite3`);
-  const db = new sqlite3(tmpFile);
+async function buildDb(tunnels) {
+  const SQL = await initSqlJs();
+  const db = new SQL.Database();
 
-  db.exec(`
-    CREATE TABLE android_metadata (locale TEXT);
-    INSERT INTO android_metadata VALUES ('en_US');
+  db.run(`CREATE TABLE android_metadata (locale TEXT);`);
+  db.run(`INSERT INTO android_metadata VALUES ('en_US');`);
 
-    CREATE TABLE tunnel_config (
-      id INTEGER PRIMARY KEY,
-      name TEXT NOT NULL,
-      wg_quick TEXT NOT NULL,
-      tunnel_networks TEXT NOT NULL DEFAULT '',
-      is_mobile_data_tunnel INTEGER NOT NULL DEFAULT false,
-      is_primary_tunnel INTEGER NOT NULL DEFAULT false,
-      am_quick TEXT NOT NULL DEFAULT '',
-      is_Active INTEGER NOT NULL DEFAULT false,
-      restart_on_ping_failure INTEGER NOT NULL DEFAULT false,
-      ping_target TEXT DEFAULT null,
-      is_ethernet_tunnel INTEGER NOT NULL DEFAULT false,
-      is_ipv4_preferred INTEGER NOT NULL DEFAULT true,
-      position INTEGER NOT NULL DEFAULT 0,
-      auto_tunnel_apps TEXT NOT NULL DEFAULT '[]',
-      is_metered INTEGER NOT NULL DEFAULT false
-    );
+  db.run(`CREATE TABLE tunnel_config (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    wg_quick TEXT NOT NULL,
+    tunnel_networks TEXT NOT NULL DEFAULT '',
+    is_mobile_data_tunnel INTEGER NOT NULL DEFAULT 0,
+    is_primary_tunnel INTEGER NOT NULL DEFAULT 0,
+    am_quick TEXT NOT NULL DEFAULT '',
+    is_Active INTEGER NOT NULL DEFAULT 0,
+    restart_on_ping_failure INTEGER NOT NULL DEFAULT 0,
+    ping_target TEXT DEFAULT null,
+    is_ethernet_tunnel INTEGER NOT NULL DEFAULT 0,
+    is_ipv4_preferred INTEGER NOT NULL DEFAULT 1,
+    position INTEGER NOT NULL DEFAULT 0,
+    auto_tunnel_apps TEXT NOT NULL DEFAULT '[]',
+    is_metered INTEGER NOT NULL DEFAULT 0
+  );`);
 
-    CREATE TABLE sqlite_sequence (name, seq);
+  db.run(`CREATE TABLE sqlite_sequence (name, seq);`);
 
-    CREATE TABLE proxy_settings (
-      id INTEGER PRIMARY KEY,
-      socks5_proxy_enabled INTEGER NOT NULL DEFAULT 0,
-      socks5_proxy_bind_address TEXT,
-      http_proxy_enable INTEGER NOT NULL DEFAULT 0,
-      http_proxy_bind_address TEXT,
-      proxy_username TEXT,
-      proxy_password TEXT
-    );
-    INSERT INTO proxy_settings VALUES (1,0,null,0,null,null,null);
+  db.run(`CREATE TABLE proxy_settings (
+    id INTEGER PRIMARY KEY,
+    socks5_proxy_enabled INTEGER NOT NULL DEFAULT 0,
+    socks5_proxy_bind_address TEXT,
+    http_proxy_enable INTEGER NOT NULL DEFAULT 0,
+    http_proxy_bind_address TEXT,
+    proxy_username TEXT,
+    proxy_password TEXT
+  );`);
+  db.run(`INSERT INTO proxy_settings VALUES (1,0,null,0,null,null,null);`);
 
-    CREATE TABLE general_settings (
-      id INTEGER PRIMARY KEY,
-      is_shortcuts_enabled INTEGER NOT NULL DEFAULT 0,
-      is_restore_on_boot_enabled INTEGER NOT NULL DEFAULT 0,
-      is_multi_tunnel_enabled INTEGER NOT NULL DEFAULT 0,
-      global_split_tunnel_enabled INTEGER NOT NULL DEFAULT 0,
-      app_mode INTEGER NOT NULL DEFAULT 0,
-      theme TEXT NOT NULL DEFAULT 'AUTOMATIC',
-      locale TEXT,
-      remote_key TEXT,
-      is_remote_control_enabled INTEGER NOT NULL DEFAULT 0,
-      is_pin_lock_enabled INTEGER NOT NULL DEFAULT 0,
-      is_always_on_vpn_enabled INTEGER NOT NULL DEFAULT 0,
-      already_donated INTEGER NOT NULL DEFAULT 0
-    );
-    INSERT INTO general_settings VALUES (1,0,0,0,0,0,'AUTOMATIC',null,null,0,0,0,0);
+  db.run(`CREATE TABLE general_settings (
+    id INTEGER PRIMARY KEY,
+    is_shortcuts_enabled INTEGER NOT NULL DEFAULT 0,
+    is_restore_on_boot_enabled INTEGER NOT NULL DEFAULT 0,
+    is_multi_tunnel_enabled INTEGER NOT NULL DEFAULT 0,
+    global_split_tunnel_enabled INTEGER NOT NULL DEFAULT 0,
+    app_mode INTEGER NOT NULL DEFAULT 0,
+    theme TEXT NOT NULL DEFAULT 'AUTOMATIC',
+    locale TEXT,
+    remote_key TEXT,
+    is_remote_control_enabled INTEGER NOT NULL DEFAULT 0,
+    is_pin_lock_enabled INTEGER NOT NULL DEFAULT 0,
+    is_always_on_vpn_enabled INTEGER NOT NULL DEFAULT 0,
+    already_donated INTEGER NOT NULL DEFAULT 0
+  );`);
+  db.run(`INSERT INTO general_settings VALUES (1,0,0,0,0,0,'AUTOMATIC',null,null,0,0,0,0);`);
 
-    CREATE TABLE auto_tunnel_settings (
-      id INTEGER PRIMARY KEY,
-      is_tunnel_enabled INTEGER NOT NULL DEFAULT 0,
-      is_tunnel_on_mobile_data_enabled INTEGER NOT NULL DEFAULT 0,
-      trusted_network_ssids TEXT NOT NULL DEFAULT '',
-      is_tunnel_on_ethernet_enabled INTEGER NOT NULL DEFAULT 0,
-      is_tunnel_on_wifi_enabled INTEGER NOT NULL DEFAULT 0,
-      is_wildcards_enabled INTEGER NOT NULL DEFAULT 0,
-      is_stop_on_no_internet_enabled INTEGER NOT NULL DEFAULT 0,
-      debounce_delay_seconds INTEGER NOT NULL DEFAULT 3,
-      is_tunnel_on_unsecure_enabled INTEGER NOT NULL DEFAULT 0,
-      wifi_detection_method INTEGER NOT NULL DEFAULT 0,
-      start_on_boot INTEGER NOT NULL DEFAULT 0
-    );
-    INSERT INTO auto_tunnel_settings VALUES (1,1,1,'[]',1,1,0,1,2,0,0,1);
+  db.run(`CREATE TABLE auto_tunnel_settings (
+    id INTEGER PRIMARY KEY,
+    is_tunnel_enabled INTEGER NOT NULL DEFAULT 0,
+    is_tunnel_on_mobile_data_enabled INTEGER NOT NULL DEFAULT 0,
+    trusted_network_ssids TEXT NOT NULL DEFAULT '',
+    is_tunnel_on_ethernet_enabled INTEGER NOT NULL DEFAULT 0,
+    is_tunnel_on_wifi_enabled INTEGER NOT NULL DEFAULT 0,
+    is_wildcards_enabled INTEGER NOT NULL DEFAULT 0,
+    is_stop_on_no_internet_enabled INTEGER NOT NULL DEFAULT 0,
+    debounce_delay_seconds INTEGER NOT NULL DEFAULT 3,
+    is_tunnel_on_unsecure_enabled INTEGER NOT NULL DEFAULT 0,
+    wifi_detection_method INTEGER NOT NULL DEFAULT 0,
+    start_on_boot INTEGER NOT NULL DEFAULT 0
+  );`);
+  db.run(`INSERT INTO auto_tunnel_settings VALUES (1,1,1,'[]',1,1,0,1,2,0,0,1);`);
 
-    CREATE TABLE monitoring_settings (
-      id INTEGER PRIMARY KEY,
-      is_ping_enabled INTEGER NOT NULL DEFAULT 0,
-      is_ping_monitoring_enabled INTEGER NOT NULL DEFAULT 1,
-      tunnel_ping_interval_sec INTEGER NOT NULL DEFAULT 30,
-      tunnel_ping_attempts INTEGER NOT NULL DEFAULT 3,
-      tunnel_ping_timeout_sec INTEGER,
-      show_detailed_ping_stats INTEGER NOT NULL DEFAULT 0,
-      is_local_logs_enabled INTEGER NOT NULL DEFAULT 0
-    );
-    INSERT INTO monitoring_settings VALUES (1,0,1,30,3,null,0,0);
+  db.run(`CREATE TABLE monitoring_settings (
+    id INTEGER PRIMARY KEY,
+    is_ping_enabled INTEGER NOT NULL DEFAULT 0,
+    is_ping_monitoring_enabled INTEGER NOT NULL DEFAULT 1,
+    tunnel_ping_interval_sec INTEGER NOT NULL DEFAULT 30,
+    tunnel_ping_attempts INTEGER NOT NULL DEFAULT 3,
+    tunnel_ping_timeout_sec INTEGER,
+    show_detailed_ping_stats INTEGER NOT NULL DEFAULT 0,
+    is_local_logs_enabled INTEGER NOT NULL DEFAULT 0
+  );`);
+  db.run(`INSERT INTO monitoring_settings VALUES (1,0,1,30,3,null,0,0);`);
 
-    CREATE TABLE dns_settings (
-      id INTEGER PRIMARY KEY,
-      dns_protocol INTEGER NOT NULL DEFAULT 0,
-      dns_endpoint TEXT,
-      global_tunnel_dns_enabled INTEGER NOT NULL DEFAULT 0
-    );
-    INSERT INTO dns_settings VALUES (1,1,null,1);
+  db.run(`CREATE TABLE dns_settings (
+    id INTEGER PRIMARY KEY,
+    dns_protocol INTEGER NOT NULL DEFAULT 0,
+    dns_endpoint TEXT,
+    global_tunnel_dns_enabled INTEGER NOT NULL DEFAULT 0
+  );`);
+  db.run(`INSERT INTO dns_settings VALUES (1,1,null,1);`);
 
-    CREATE TABLE lockdown_settings (
-      id INTEGER PRIMARY KEY,
-      bypass_lan INTEGER NOT NULL DEFAULT 0,
-      metered INTEGER NOT NULL DEFAULT 0,
-      dual_stack INTEGER NOT NULL DEFAULT 0
-    );
+  db.run(`CREATE TABLE lockdown_settings (
+    id INTEGER PRIMARY KEY,
+    bypass_lan INTEGER NOT NULL DEFAULT 0,
+    metered INTEGER NOT NULL DEFAULT 0,
+    dual_stack INTEGER NOT NULL DEFAULT 0
+  );`);
 
-    CREATE TABLE room_master_table (id INTEGER, identity_hash TEXT);
-    INSERT INTO room_master_table VALUES (42,'345471c118dee1b7688afa81d835e62c');
+  db.run(`CREATE TABLE room_master_table (id INTEGER, identity_hash TEXT);`);
+  db.run(`INSERT INTO room_master_table VALUES (42,'345471c118dee1b7688afa81d835e62c');`);
 
-    INSERT INTO sqlite_sequence VALUES ('proxy_settings',1);
-    INSERT INTO sqlite_sequence VALUES ('general_settings',1);
-    INSERT INTO sqlite_sequence VALUES ('auto_tunnel_settings',1);
-  `);
+  db.run(`INSERT INTO sqlite_sequence VALUES ('proxy_settings',1);`);
+  db.run(`INSERT INTO sqlite_sequence VALUES ('general_settings',1);`);
+  db.run(`INSERT INTO sqlite_sequence VALUES ('auto_tunnel_settings',1);`);
 
-  const insert = db.prepare(`
+  const stmt = db.prepare(`
     INSERT INTO tunnel_config
     (name, wg_quick, tunnel_networks, is_mobile_data_tunnel, is_primary_tunnel,
      am_quick, is_Active, restart_on_ping_failure, ping_target, is_ethernet_tunnel,
@@ -144,14 +139,13 @@ function buildDb(tunnels) {
   `);
 
   tunnels.forEach((t, i) => {
-    insert.run(t.name, t.wg_quick, i === 0 ? 1 : 0, t.am_quick, i);
+    stmt.run([t.name, t.wg_quick, i === 0 ? 1 : 0, t.am_quick, i]);
   });
+  stmt.free();
 
+  const data = db.export();
   db.close();
-
-  const buf = fs.readFileSync(tmpFile);
-  fs.unlinkSync(tmpFile);
-  return buf;
+  return Buffer.from(data);
 }
 
 exports.handler = async () => {
@@ -175,7 +169,7 @@ exports.handler = async () => {
       tunnels.push({ name: endpoint, wg_quick, am_quick });
     }
 
-    const dbBuffer = buildDb(tunnels);
+    const dbBuffer = await buildDb(tunnels);
     const filename = `wg-tunnel-db-${new Date().toISOString().slice(0,19).replace(/[T:]/g,"-")}.sqlite3`;
 
     return {
