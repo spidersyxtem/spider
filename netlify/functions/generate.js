@@ -33,7 +33,7 @@ async function buildDb(tunnels) {
   db.run(`INSERT INTO android_metadata VALUES ('en_US');`);
 
   db.run(`CREATE TABLE tunnel_config (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     wg_quick TEXT NOT NULL,
     tunnel_networks TEXT NOT NULL DEFAULT '',
@@ -50,10 +50,8 @@ async function buildDb(tunnels) {
     is_metered INTEGER NOT NULL DEFAULT 0
   );`);
 
-  db.run(`CREATE TABLE sqlite_sequence (name, seq);`);
-
   db.run(`CREATE TABLE proxy_settings (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     socks5_proxy_enabled INTEGER NOT NULL DEFAULT 0,
     socks5_proxy_bind_address TEXT,
     http_proxy_enable INTEGER NOT NULL DEFAULT 0,
@@ -64,7 +62,7 @@ async function buildDb(tunnels) {
   db.run(`INSERT INTO proxy_settings VALUES (1,0,null,0,null,null,null);`);
 
   db.run(`CREATE TABLE general_settings (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     is_shortcuts_enabled INTEGER NOT NULL DEFAULT 0,
     is_restore_on_boot_enabled INTEGER NOT NULL DEFAULT 0,
     is_multi_tunnel_enabled INTEGER NOT NULL DEFAULT 0,
@@ -81,7 +79,7 @@ async function buildDb(tunnels) {
   db.run(`INSERT INTO general_settings VALUES (1,0,0,0,0,0,'AUTOMATIC',null,null,0,0,0,0);`);
 
   db.run(`CREATE TABLE auto_tunnel_settings (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     is_tunnel_enabled INTEGER NOT NULL DEFAULT 0,
     is_tunnel_on_mobile_data_enabled INTEGER NOT NULL DEFAULT 0,
     trusted_network_ssids TEXT NOT NULL DEFAULT '',
@@ -97,7 +95,7 @@ async function buildDb(tunnels) {
   db.run(`INSERT INTO auto_tunnel_settings VALUES (1,1,1,'[]',1,1,0,1,2,0,0,1);`);
 
   db.run(`CREATE TABLE monitoring_settings (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     is_ping_enabled INTEGER NOT NULL DEFAULT 0,
     is_ping_monitoring_enabled INTEGER NOT NULL DEFAULT 1,
     tunnel_ping_interval_sec INTEGER NOT NULL DEFAULT 30,
@@ -109,7 +107,7 @@ async function buildDb(tunnels) {
   db.run(`INSERT INTO monitoring_settings VALUES (1,0,1,30,3,null,0,0);`);
 
   db.run(`CREATE TABLE dns_settings (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     dns_protocol INTEGER NOT NULL DEFAULT 0,
     dns_endpoint TEXT,
     global_tunnel_dns_enabled INTEGER NOT NULL DEFAULT 0
@@ -117,7 +115,7 @@ async function buildDb(tunnels) {
   db.run(`INSERT INTO dns_settings VALUES (1,1,null,1);`);
 
   db.run(`CREATE TABLE lockdown_settings (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     bypass_lan INTEGER NOT NULL DEFAULT 0,
     metered INTEGER NOT NULL DEFAULT 0,
     dual_stack INTEGER NOT NULL DEFAULT 0
@@ -125,10 +123,6 @@ async function buildDb(tunnels) {
 
   db.run(`CREATE TABLE room_master_table (id INTEGER, identity_hash TEXT);`);
   db.run(`INSERT INTO room_master_table VALUES (42,'345471c118dee1b7688afa81d835e62c');`);
-
-  db.run(`INSERT INTO sqlite_sequence VALUES ('proxy_settings',1);`);
-  db.run(`INSERT INTO sqlite_sequence VALUES ('general_settings',1);`);
-  db.run(`INSERT INTO sqlite_sequence VALUES ('auto_tunnel_settings',1);`);
 
   const stmt = db.prepare(`
     INSERT INTO tunnel_config
