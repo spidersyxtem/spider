@@ -29,31 +29,13 @@ async function buildDb(tunnels) {
   const SQL = await initSqlJs();
   const db = new SQL.Database();
 
-  // Set user_version to match original backup (Room DB version)
   db.run("PRAGMA user_version = 29;");
 
   db.run(`CREATE TABLE android_metadata (locale TEXT);`);
   db.run(`INSERT INTO android_metadata VALUES ('en_US');`);
 
-  db.run(`CREATE TABLE \`tunnel_config\` (
-    \`id\` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    \`name\` TEXT NOT NULL,
-    \`wg_quick\` TEXT NOT NULL,
-    \`tunnel_networks\` TEXT NOT NULL DEFAULT '',
-    \`is_mobile_data_tunnel\` INTEGER NOT NULL DEFAULT false,
-    \`is_primary_tunnel\` INTEGER NOT NULL DEFAULT false,
-    \`am_quick\` TEXT NOT NULL DEFAULT '',
-    \`is_Active\` INTEGER NOT NULL DEFAULT false,
-    \`restart_on_ping_failure\` INTEGER NOT NULL DEFAULT false,
-    \`ping_target\` TEXT DEFAULT null,
-    \`is_ethernet_tunnel\` INTEGER NOT NULL DEFAULT false,
-    \`is_ipv4_preferred\` INTEGER NOT NULL DEFAULT true,
-    \`position\` INTEGER NOT NULL DEFAULT 0,
-    \`auto_tunnel_apps\` TEXT NOT NULL DEFAULT '[]',
-    \`is_metered\` INTEGER NOT NULL DEFAULT false
-  );`);
-
-  db.run(`CREATE TABLE sqlite_sequence(name,seq);`);
+  db.run(`CREATE TABLE room_master_table (id INTEGER PRIMARY KEY, identity_hash TEXT);`);
+  db.run(`INSERT INTO room_master_table VALUES (42,'345471c118dee1b7688afa81d835e62c');`);
 
   db.run(`CREATE TABLE \`proxy_settings\` (
     \`id\` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -126,12 +108,23 @@ async function buildDb(tunnels) {
     \`dual_stack\` INTEGER NOT NULL DEFAULT 0
   );`);
 
-  db.run(`CREATE TABLE room_master_table (id INTEGER PRIMARY KEY, identity_hash TEXT);`);
-  db.run(`INSERT INTO room_master_table VALUES (42,'345471c118dee1b7688afa81d835e62c');`);
-
-  db.run(`INSERT INTO sqlite_sequence VALUES ('proxy_settings',1);`);
-  db.run(`INSERT INTO sqlite_sequence VALUES ('general_settings',1);`);
-  db.run(`INSERT INTO sqlite_sequence VALUES ('auto_tunnel_settings',1);`);
+  db.run(`CREATE TABLE \`tunnel_config\` (
+    \`id\` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    \`name\` TEXT NOT NULL,
+    \`wg_quick\` TEXT NOT NULL,
+    \`tunnel_networks\` TEXT NOT NULL DEFAULT '',
+    \`is_mobile_data_tunnel\` INTEGER NOT NULL DEFAULT false,
+    \`is_primary_tunnel\` INTEGER NOT NULL DEFAULT false,
+    \`am_quick\` TEXT NOT NULL DEFAULT '',
+    \`is_Active\` INTEGER NOT NULL DEFAULT false,
+    \`restart_on_ping_failure\` INTEGER NOT NULL DEFAULT false,
+    \`ping_target\` TEXT DEFAULT null,
+    \`is_ethernet_tunnel\` INTEGER NOT NULL DEFAULT false,
+    \`is_ipv4_preferred\` INTEGER NOT NULL DEFAULT true,
+    \`position\` INTEGER NOT NULL DEFAULT 0,
+    \`auto_tunnel_apps\` TEXT NOT NULL DEFAULT '[]',
+    \`is_metered\` INTEGER NOT NULL DEFAULT false
+  );`);
 
   const stmt = db.prepare(`
     INSERT INTO \`tunnel_config\`
@@ -173,7 +166,9 @@ exports.handler = async () => {
     }
 
     const dbBuffer = await buildDb(tunnels);
-    const filename = `wg-tunnel-db-${new Date().toISOString().slice(0,19).replace(/[T:]/g,"-")}.sqlite3`;
+
+    // သင့် backup file name အတိုင်း
+    const filename = "wg-tunnel-db-2026-04-05-15_22_43.sqlite3";
 
     return {
       statusCode: 200,
