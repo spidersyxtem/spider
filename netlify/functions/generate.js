@@ -1,5 +1,4 @@
 const crypto = require("crypto");
-const JSZip = require("jszip");
 
 function generateKeypair() {
   const { publicKey, privateKey } = crypto.generateKeyPairSync("x25519");
@@ -28,19 +27,15 @@ async function registerDevice(publicKey) {
 exports.handler = async () => {
   try {
     const endpoints = Array.from({ length: 20 }, (_, i) => `162.159.192.${i + 1}`);
-    const shuffled = endpoints.sort(() => Math.random() - 0.5);
+    const endpoint = endpoints[Math.floor(Math.random() * endpoints.length)];
 
-    const zip = new JSZip();
+    const { publicKey, privateKey } = generateKeypair();
+    const data = await registerDevice(publicKey);
 
-    for (let i = 0; i < 3; i++) {
-      const endpoint = shuffled[i];
-      const { publicKey, privateKey } = generateKeypair();
-      const data = await registerDevice(publicKey);
+    const peer = data.config.peers[0];
+    const iface = data.config.interface;
 
-      const peer = data.config.peers[0];
-      const iface = data.config.interface;
-
-      const conf = `[Interface]
+    const conf = `[Interface]
 PrivateKey = ${privateKey}
 Address = ${iface.addresses.v4}/32, ${iface.addresses.v6}/128
 DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001
@@ -52,20 +47,16 @@ AllowedIPs = 0.0.0.0/0, ::/0
 Endpoint = ${endpoint}:500
 PersistentKeepalive = 20
 `;
-      zip.file(`${endpoint}.conf`, conf);
-    }
-
-    const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
     return {
       statusCode: 200,
       headers: {
-        "Content-Type": "application/zip",
-        "Content-Disposition": "attachment; filename=warp.zip",
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": `attachment; filename="${endpoint}.conf"`,
+        "X-Content-Type-Options": "nosniff",
         "Access-Control-Allow-Origin": "*",
       },
-      body: zipBuffer.toString("base64"),
-      isBase64Encoded: true,
+      body: conf,
     };
   } catch (err) {
     return {
