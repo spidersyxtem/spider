@@ -2,6 +2,6 @@
   "name": "spider",
   "version": "1.0.0",
   "dependencies": {
-    "sql.js": "^1.12.0"
+    "jszip": "^3.10.1"
   }
 }
